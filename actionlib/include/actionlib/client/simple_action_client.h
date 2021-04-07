@@ -459,9 +459,10 @@ void SimpleActionClient<ActionSpec>::handleFeedback(GoalHandleT gh,
 {
   if (gh_ != gh) {
     ROS_ERROR_NAMED("actionlib",
-      "Got a callback on a goalHandle that we're not tracking.  \
-               This is an internal SimpleActionClient/ActionClient bug.  \
-               This could also be a GoalID collision");
+      "Got feedback on a goalHandle that we're not tracking. "
+      "This is an internal SimpleActionClient/ActionClient bug. "
+      "This could also be a GoalID collision");
+    return;
   }
   if (feedback_cb_) {
     feedback_cb_(feedback);
@@ -471,6 +472,13 @@ void SimpleActionClient<ActionSpec>::handleFeedback(GoalHandleT gh,
 template<class ActionSpec>
 void SimpleActionClient<ActionSpec>::handleTransition(GoalHandleT gh)
 {
+  if (gh != gh_) {
+    ROS_ERROR_NAMED("actionlib",
+      "Got a transition on a goalHandle that we're not tracking. "
+      "This is an internal SimpleActionClient/ActionClient bug. "
+      "This could also be a GoalID collision");
+    return;
+  }
   CommState comm_state_ = gh.getCommState();
   switch (comm_state_.state_) {
     case CommState::WAITING_FOR_GOAL_ACK:
