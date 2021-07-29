@@ -320,16 +320,18 @@ void SimpleActionClient<ActionSpec>::sendGoal(const Goal & goal,
   SimpleActiveCallback active_cb,
   SimpleFeedbackCallback feedback_cb)
 {
-  boost::lock_guard<boost::mutex> lock(transition_mutex_);
-  // Reset the old GoalHandle, so that our callbacks won't get called anymore
-  gh_.reset();
+  {
+    boost::lock_guard<boost::mutex> lock( transition_mutex_ );
+    // Reset the old GoalHandle, so that our callbacks won't get called anymore
+    gh_.reset();
 
-  // Store all the callbacks
-  done_cb_ = done_cb;
-  active_cb_ = active_cb;
-  feedback_cb_ = feedback_cb;
+    // Store all the callbacks
+    done_cb_ = done_cb;
+    active_cb_ = active_cb;
+    feedback_cb_ = feedback_cb;
 
-  cur_simple_state_ = SimpleGoalState::PENDING;
+    cur_simple_state_ = SimpleGoalState::PENDING;
+  }
 
   // Send the goal to the ActionServer
   gh_ = ac_->sendGoal(goal, boost::bind(&SimpleActionClientT::handleTransition, this, _1),
@@ -552,9 +554,9 @@ void SimpleActionClient<ActionSpec>::handleTransition(GoalHandleT gh)
           boost::lock_guard<boost::mutex> done_lock(done_mutex_);
           setSimpleState( SimpleGoalState::DONE );
         }
+          done_condition_.notify_all();
 
           lock.unlock();
-          done_condition_.notify_all();
           if (done_cb_) {
             done_cb_(getState(), gh.getResult());
           }
