@@ -554,12 +554,12 @@ void SimpleActionClient<ActionSpec>::handleTransition(GoalHandleT gh)
           boost::lock_guard<boost::mutex> done_lock(done_mutex_);
           setSimpleState( SimpleGoalState::DONE );
         }
-          done_condition_.notify_all();
 
           lock.unlock();
           if (done_cb_) {
             done_cb_(getState(), gh.getResult());
           }
+          done_condition_.notify_all();
 
           break;
         case SimpleGoalState::DONE:
@@ -615,8 +615,10 @@ bool SimpleActionClient<ActionSpec>::waitForResult(const ros::Duration & timeout
       time_left = loop_period;
     }
 
-    done_condition_.timed_wait(lock,
-      boost::posix_time::milliseconds(static_cast<int64_t>(time_left.toSec() * 1000.0f)));
+    if (done_condition_.timed_wait( lock,
+                                     boost::posix_time::milliseconds(
+                                       static_cast<int64_t>(time_left.toSec() * 1000.0f))))
+      return true; // Done condition only triggers if we switched to done, but done cb might have started new goal already
   }
 
   return cur_simple_state_ == SimpleGoalState::DONE;
